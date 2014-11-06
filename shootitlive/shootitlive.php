@@ -24,8 +24,8 @@ function silp_add_defaults() {
     if(($tmp['chk_default_options_db']=='1')||(!is_array($tmp))) {
 		delete_option('silp_options'); // so we don't have to reset all the 'off' checkboxes too! (don't think this is needed but leave for now)
 		$arr = array(
-						"client" => "Enter Organisation Name",
-						"token" => "Enter API Key"
+			"client" => "Enter Organisation Name",
+			"token" => "Enter API Key"
 		);
 		update_option('silp_options', $arr);
 	}
@@ -38,72 +38,95 @@ function silp_init(){
 
 // Add meta_box
 add_action( 'add_meta_boxes', 'silp_meta_box_add' );
-function silp_meta_box_add()
-{
+function silp_meta_box_add() {
 	add_meta_box( 'silp-meta-box-id', 'Shootitlive', 'silp_meta_box_cb', 'post', 'side', 'high' );
 }
 
 
 //API call & drop down menu
-function silp_meta_box_cb( $post )
-{
-
-
+function silp_meta_box_cb( $post ) {
 	$values = get_post_custom( $post->ID );
 	$selected = isset( $values['silp_meta_box_select'] ) ? esc_attr( $values['silp_meta_box_select'][0] ) : '';
 	$options = get_option('silp_options');
     $silp_client = $options['client'];
     $silp_token = $options['token'];
 
+	if ($options['client'] =='Enter Organisation Name' or $options['client'] =='') {
+		//nothing here
+		echo "Please, enter API settings";
+	}
 
-if ($options['client'] =='Enter Organisation Name' or $options['client'] =='')
-{
-//nothing here
-echo "Please, enter API settings";
-}
-
-else {
-	$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true";
-	$json_data2 = file_get_contents($silp_call);
-	$obj2=json_decode($json_data2, true);
+	else {
+		$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true";
+		$json_data2 = file_get_contents($silp_call);
+		$obj2=json_decode($json_data2, true);
 
 	}
 
 	wp_nonce_field( 'silp_meta_box_nonce', 'meta_box_nonce' );
-?>
-	<p>
-
-		<!--<label for="silp_meta_box_select">Select a project:</label>-->
-		<select name="silp_meta_box_select" id="silp_meta_box_select">
-	<option>Select a project:</option>
-<?php
-foreach($obj2[$silp_client] as $p)
-{
-echo "<option value='";
-echo $p[project];
-echo "'";
-?>
-
-<?php selected( $selected, $p[project]); ?>
-
-<?php
-echo ">";
-echo $p[description];
-echo "</option>";
-
-echo $p[embed];
-
-}
-?>
-
-		</select>
-	</p>
 
 
-<?php
+	echo "<div style='float:left;'>Project:</div>";
 
+	echo "<div style='margin-left:60px;'>";
+	echo "<select name='silp_meta_box_select' id='silp_meta_box_select'>\n\n";
+	echo "\n\n<option>Select a project:</option>\n\n";
 
+	foreach($obj2[$silp_client] as $p) {
+		echo "<option value='".$p[project]."'".selected( $selected, $p[project]).">";
+		//limit project description to 23chars, so it fits in dropdown
+		$description = (strlen($p[description]) > 23) ? substr($p[description],0,19).'...' : $p[description];
+		echo $description;
+		echo "</option>\n";
+		echo $p[embed]."\n\n";
+	}
 
+	echo "</select>";
+	echo "</div>\n\n";
+
+	echo "<p>\n";
+	echo "<div style='float:left;'>Options:</div>\n";
+	foreach ($obj2[silp_options] as $key => $value) {
+		$hiddenArr = explode(',', $obj2[silp_options][hidden]); //convert "hidden" to an array
+		if(!in_array($key, (array)$hiddenArr)) { //only list not hidden silp_options
+
+			if(is_bool($value) || $key == "ratio") { //only include key with true/false value and the ratio key
+
+				if($key !="ratio") {
+					echo "<div style='margin-left:60px;'>\n";
+					$checked = ($value == true) ? "checked" : "";
+					echo "<input type='checkbox' name='".$key."' value='".$value."' ".$checked."> ".$key."\n";
+					echo "</div>\n";
+				}
+
+				if($key =="ratio") {
+					/*
+					Instead of printing the ratio dropdown immediately
+					we print the output below to make sure it displays
+					as the last option - this is just for looks
+					*/
+					if($value == 1.5) $valueDescription = "Standard";
+					if($value == 1.7777777778) $valueDescription = "Wide";
+					if($value == 1) $valueDescription = "Square";
+
+					$ratioHtml = "<div style='margin-left:60px;'>\n";
+
+					$ratioHtml .= "<select name='silp_ratio_box_select' id='silp_ratio_box_select'>\n\n";
+					$ratioHtml .= "<option value='".$value."' selected='selected'>".$valueDescription."</option>\n";
+					if($value != 1.5) $ratioHtml .= "<option value='1.5'>Standard</option>\n";
+					if($value != 1.7777777778) $ratioHtml .= "<option value='1.7777777778'>Wide</option>\n";
+					if($value != 1) $ratioHtml .= "<option value='1'>Square</option>\n";
+					$ratioHtml .= "</select>";
+					$ratioHtml .= " ".$key."\n";
+
+					$ratioHtml .= "</div>\n";
+				}
+
+			}
+ 		}
+	}
+	if($ratioHtml) echo $ratioHtml;
+	echo "</p>\n\n";
 
 }
 
@@ -145,50 +168,42 @@ function silp_meta_box_save( $post_id )
 //[silp]
 function silp_embed()  {
 
-global $post;
-$project = get_post_meta($post->ID, 'silp_meta_box_select', true);
-$options = get_option('silp_options');
-$silp_client = $options['client'];
-$silp_token = $options['token'];
-// echo $silp_token;
-$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true&project=".$project;
-$json_data2 = file_get_contents($silp_call);
-$obj3=json_decode($json_data2, true);
-return $obj3[$silp_client][0][embed];
+	global $post;
+	$project = get_post_meta($post->ID, 'silp_meta_box_select', true);
+	$testArr = get_post_meta($post->ID, 'silp_meta_box_select', true);
+	$options = get_option('silp_options');
+	$silp_client = $options['client'];
+	$silp_token = $options['token'];
+	// echo $silp_token;
+	$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true&project=".$project;
+	$json_data2 = file_get_contents($silp_call);
+	$obj3=json_decode($json_data2, true);
 
-
+	return $obj3[$silp_client][0][embed];
 
 }
+
 add_shortcode( 'silp', 'silp_embed' );
 
-
-
 //Hook the_content
-
 add_filter('the_content', 'silp_content');
 
 function silp_content($content = '') {
-			$content .= do_shortcode("[silp]");
-			return $content;
-		}
-
-
-
+	$content .= do_shortcode("[silp]");
+	return $content;
+}
 
 //Settings page content
-
 add_action("admin_menu","silp_admin_menu");
 function silp_admin_menu(){
-add_menu_page(/*page title*/'Dashboard', /*Menu Title*/'Shootitlive',/*access*/'administrator', 'shootitlive', 'silp_dashboard_page',plugins_url('sil.ico', __FILE__));
-
-add_submenu_page( 'shootitlive', 'Settings', 'Settings', 'administrator', 'dashboard', 'silp_settings_page' );
-
+	add_menu_page(/*page title*/'Dashboard', /*Menu Title*/'Shootitlive',/*access*/'administrator', 'shootitlive', 'silp_dashboard_page',plugins_url('sil.ico', __FILE__));
+	add_submenu_page( 'shootitlive', 'Settings', 'Settings', 'administrator', 'dashboard', 'silp_settings_page' );
 }
+
 function silp_settings_page() { /*handler for above menu item*/
 
-?>
+	?>
 	<div class="wrap">
-
 		<!-- Display Plugin Icon, Header, and Description -->
 		<div class="icon32" id="icon-options-general"><br></div>
 		<h2>Shootitlive</h2>
@@ -201,8 +216,7 @@ function silp_settings_page() { /*handler for above menu item*/
 			<!-- Table Structure Containing Form Controls -->
 			<!-- Each Plugin Option Defined on a New Table Row -->
 			<table class="form-table">
-
-									<!-- Textbox Control -->
+				<!-- Textbox Control -->
 				<tr>
 					<th scope="row">Enter Organisation Name:</th>
 					<td>
@@ -222,28 +236,22 @@ function silp_settings_page() { /*handler for above menu item*/
 			<input type="submit" class="button-primary" value="<?php _e('Save Changes') ?>" />
 			</p>
 		</form>
-
-	<!--	<p style="margin-top:15px;">
-			<p style="font-style: italic;font-weight: bold;color: #26779a;">If you have found this starter kit at all useful, please consider making a <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=XKZXD2BHQ5UB2" target="_blank" style="color:#72a1c6;">donation</a>. Thanks.</p>
-		</p>
--->
 	</div>
-
-<?php }
+	<?
+}
 
 
 function silp_dashboard_page() { /*handler for above menu item*/
-
-?>
+	?>
 	<iframe src="http://admin.shootitlive.com/projects" frameBorder="0" marginwidth="0px" marginheight="0px" scrolling="yes" width="100%" height="100%"></iframe>
-
-<?php }
+	<?
+}
 
 // Sanitize and validate input. Accepts an array, return a sanitized array.
 function silp_validate_options($input) {
 	 // strip html from textboxes
-	$input['client'] =  wp_filter_nohtml_kses($input['client']); // Sanitize textarea input (strip html tags, and escape characters)
-	$input['token'] =  wp_filter_nohtml_kses($input['token']); // Sanitize textbox input (strip html tags, and escape characters)
+	$input['client'] = wp_filter_nohtml_kses($input['client']); // Sanitize textarea input (strip html tags, and escape characters)
+	$input['token'] = wp_filter_nohtml_kses($input['token']); // Sanitize textbox input (strip html tags, and escape characters)
 	return $input;
 }
 
