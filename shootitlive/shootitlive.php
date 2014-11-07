@@ -69,7 +69,7 @@ function silp_meta_box_cb( $post ) {
 	echo "<div style='float:left;'>Project:</div>";
 
 	echo "<div style='margin-left:60px;'>";
-	echo "<select name='silp_meta_box_select' id='silp_meta_box_select'>\n\n";
+	echo "<select name='silp_meta_box_select' id='silp_meta_box_select' onchange='goEmbed();'>\n\n";
 	echo "\n\n<option>Select a project:</option>\n\n";
 
 	foreach($obj2[$silp_client] as $p) {
@@ -78,7 +78,8 @@ function silp_meta_box_cb( $post ) {
 		$description = (strlen($p[description]) > 23) ? substr($p[description],0,19).'...' : $p[description];
 		echo $description;
 		echo "</option>\n";
-		echo $p[embed]."\n\n";
+		if($selected == $p[project]) $embedcode = $p[embed];
+		// echo $p[embed]."\n\n";
 	}
 
 	echo "</select>";
@@ -95,7 +96,7 @@ function silp_meta_box_cb( $post ) {
 				if($key !="ratio") {
 					echo "<div style='margin-left:60px;'>\n";
 					$checked = ($value == true) ? "checked" : "";
-					echo "<input type='checkbox' name='".$key."' value='".$value."' ".$checked."> ".$key."\n";
+					echo "<input type='checkbox' name='silp_settings[]' value='".$key."' ".$checked."> ".$key."\n";
 					echo "</div>\n";
 				}
 
@@ -128,6 +129,9 @@ function silp_meta_box_cb( $post ) {
 	if($ratioHtml) echo $ratioHtml;
 	echo "</p>\n\n";
 
+	echo "<div id='player-area'>";
+	echo $embedcode;
+	echo "</div>";
 }
 
 
@@ -171,6 +175,7 @@ function silp_embed()  {
 	global $post;
 	$project = get_post_meta($post->ID, 'silp_meta_box_select', true);
 	$testArr = get_post_meta($post->ID, 'silp_meta_box_select', true);
+	echo "TESTAR: ".$testArr;
 	$options = get_option('silp_options');
 	$silp_client = $options['client'];
 	$silp_token = $options['token'];
@@ -255,5 +260,36 @@ function silp_validate_options($input) {
 	return $input;
 }
 
-
 ?>
+
+<script>
+
+
+
+	function updatePlayer(project) {
+
+		var player = document.getElementById('player-area');
+		while (player.firstChild) {
+		    player.removeChild(player.firstChild);
+		}
+
+		// Make sure to reload Silp entirely
+	    if(window.Silp) window.Silp = {};
+
+	    var script = document.createElement('script');
+	    script.type = 'text/javascript';
+	    //script.src = createScriptSrc(params);
+	    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.martin.js?project='+project;
+	    player.appendChild(script);
+
+	}
+
+	function goEmbed() {
+	    var projectID = document.getElementById('silp_meta_box_select')
+		var project = projectID.options[projectID.selectedIndex].value;
+		updatePlayer(project);
+	}
+
+
+</script>
+
