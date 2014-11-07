@@ -79,14 +79,15 @@ function silp_meta_box_cb( $post ) {
 		echo $description;
 		echo "</option>\n";
 		if($selected == $p[project]) $embedcode = $p[embed];
-		// echo $p[embed]."\n\n";
 	}
 
 	echo "</select>";
 	echo "</div>\n\n";
 
-	echo "<p>\n";
+
+	echo "<div id='silp_settings'>\n";
 	echo "<div style='float:left;'>Options:</div>\n";
+	$silp_settings = array(); //init array that will hold all true/false & ratio silp_settings not hidden for this client
 	foreach ($obj2[silp_options] as $key => $value) {
 		$hiddenArr = explode(',', $obj2[silp_options][hidden]); //convert "hidden" to an array
 		if(!in_array($key, (array)$hiddenArr)) { //only list not hidden silp_options
@@ -96,8 +97,9 @@ function silp_meta_box_cb( $post ) {
 				if($key !="ratio") {
 					echo "<div style='margin-left:60px;'>\n";
 					$checked = ($value == true) ? "checked" : "";
-					echo "<input type='checkbox' name='silp_settings[]' value='".$key."' ".$checked."> ".$key."\n";
+					echo "<input type='checkbox' name='silp_settings[]' onchange='goEmbed();' value='".$key."' ".$checked."> ".$key."\n";
 					echo "</div>\n";
+					// $silp_settings[][$key] = $value;
 				}
 
 				if($key =="ratio") {
@@ -112,7 +114,7 @@ function silp_meta_box_cb( $post ) {
 
 					$ratioHtml = "<div style='margin-left:60px;'>\n";
 
-					$ratioHtml .= "<select name='silp_ratio_box_select' id='silp_ratio_box_select'>\n\n";
+					$ratioHtml .= "<select name='silp_ratio_box_select' id='silp_ratio_box_select' onchange='goEmbed();'>\n\n";
 					$ratioHtml .= "<option value='".$value."' selected='selected'>".$valueDescription."</option>\n";
 					if($value != 1.5) $ratioHtml .= "<option value='1.5'>Standard</option>\n";
 					if($value != 1.7777777778) $ratioHtml .= "<option value='1.7777777778'>Wide</option>\n";
@@ -127,11 +129,25 @@ function silp_meta_box_cb( $post ) {
  		}
 	}
 	if($ratioHtml) echo $ratioHtml;
-	echo "</p>\n\n";
+	echo "</div>\n\n";
 
 	echo "<div id='player-area'>";
 	echo $embedcode;
-	echo "</div>";
+	echo "</div>\n\n";
+
+	echo "<script>\n";
+	echo "silp_settings = {\n";
+	$last_key = end(array_keys($silp_settings));
+	foreach ($silp_settings as $k) {
+				foreach ($k as $key => $value) {
+					echo "'".$key."':".$value;
+					if(current($k) != $last_key) echo ",";
+					echo "\n";
+				}
+			}
+	echo "}";
+	echo "</script>";
+
 }
 
 
@@ -263,9 +279,6 @@ function silp_validate_options($input) {
 ?>
 
 <script>
-
-
-
 	function updatePlayer(project) {
 
 		var player = document.getElementById('player-area');
@@ -292,9 +305,20 @@ function silp_validate_options($input) {
 	function goEmbed() {
 	    var projectID = document.getElementById('silp_meta_box_select')
 		var project = projectID.options[projectID.selectedIndex].value;
+
+
+		var silp_settings = document.getElementById('silp_settings').getElementsByTagName('input')
+		// loop through each input element and output the value of any checkbox elements
+		 for (x = 0; x < silp_settings.length; x++) {
+			 if (silp_settings.item(x).type == 'checkbox') {
+			 	var input = silp_settings.item(x).value;
+			 	console.log(input);
+			 }
+		}
+
+
 		updatePlayer(project);
+
 	}
 
-
 </script>
-
