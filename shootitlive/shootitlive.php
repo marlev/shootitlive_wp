@@ -70,7 +70,7 @@ function silp_meta_box_cb( $post ) {
 
 	echo "<div style='margin-left:60px;'>";
 	echo "<select name='silp_meta_box_select' id='silp_meta_box_select' onchange='goEmbed();'>\n\n";
-	echo "\n\n<option>Select a project:</option>\n\n";
+	echo "\n\n<option value='0'>Select a project:</option>\n\n";
 
 	foreach($obj2[$silp_client] as $p) {
 		echo "<option value='".$p[project]."'".selected( $selected, $p[project]).">";
@@ -276,12 +276,17 @@ function silp_validate_options($input) {
 		// Make sure to reload Silp entirely
 	    if(window.Silp) window.Silp = {};
 
-	    var script = document.createElement('script');
-	    script.type = 'text/javascript';
-	    //script.src = createScriptSrc(params);
-	    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.martin.js?project='+project;
-	    player.appendChild(script);
-
+	    if(project != 0) {
+		    player.style.display = 'block';
+		    var script = document.createElement('script');
+		    script.type = 'text/javascript';
+		    //script.src = createScriptSrc(params);
+		    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.martin.js?project='+project;
+		    player.appendChild(script);
+		}
+		else {
+			player.style.display = 'none';
+		}
 	}
 
 	function goEmbed() {
