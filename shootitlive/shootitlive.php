@@ -85,9 +85,6 @@ function silp_meta_box_cb( $post ) {
 	echo "</div>\n\n";
 
 
-	echo "<div id='silp_settings'>\n";
-	echo "<div style='float:left;'>Options:</div>\n";
-	$silp_settings = array(); //init array that will hold all true/false & ratio silp_settings not hidden for this client
 	foreach ($obj2[silp_options] as $key => $value) {
 		$hiddenArr = explode(',', $obj2[silp_options][hidden]); //convert "hidden" to an array
 		if(!in_array($key, (array)$hiddenArr)) { //only list not hidden silp_options
@@ -95,11 +92,10 @@ function silp_meta_box_cb( $post ) {
 			if(is_bool($value) || $key == "ratio") { //only include key with true/false value and the ratio key
 
 				if($key !="ratio") {
-					echo "<div style='margin-left:60px;'>\n";
+					$checkboxHtml = "<div style='margin-left:60px;'>\n";
 					$checked = ($value == true) ? "checked" : "";
-					echo "<input type='checkbox' name='silp_settings[]' onchange='goEmbed();' value='".$key."' ".$checked."> ".$key."\n";
-					echo "</div>\n";
-					// $silp_settings[][$key] = $value;
+					$checkboxHtml .= "<input type='checkbox' id='".$key."' name='".$key."' onchange='goEmbed();' value='".$value."' ".$checked."> ".$key."\n";
+					$checkboxHtml .= "</div>\n";
 				}
 
 				if($key =="ratio") {
@@ -128,25 +124,19 @@ function silp_meta_box_cb( $post ) {
 			}
  		}
 	}
+	echo "<div id='silp_settings'>\n";
+
+	//only ouput "Option" if we have silp_settings to display
+	if( ($checkboxHtml) || ($checkboxHtml) ) echo "<div style='float:left;'>Options:</div>\n";
+
+	if($checkboxHtml) echo $checkboxHtml;
 	if($ratioHtml) echo $ratioHtml;
-	echo "</div>\n\n";
+
+	echo "</div>\n\n"; //silp_settings div
 
 	echo "<div id='player-area'>";
 	echo $embedcode;
 	echo "</div>\n\n";
-
-	echo "<script>\n";
-	echo "silp_settings = {\n";
-	$last_key = end(array_keys($silp_settings));
-	foreach ($silp_settings as $k) {
-				foreach ($k as $key => $value) {
-					echo "'".$key."':".$value;
-					if(current($k) != $last_key) echo ",";
-					echo "\n";
-				}
-			}
-	echo "}";
-	echo "</script>";
 
 }
 
@@ -191,7 +181,6 @@ function silp_embed()  {
 	global $post;
 	$project = get_post_meta($post->ID, 'silp_meta_box_select', true);
 	$testArr = get_post_meta($post->ID, 'silp_meta_box_select', true);
-	echo "TESTAR: ".$testArr;
 	$options = get_option('silp_options');
 	$silp_client = $options['client'];
 	$silp_token = $options['token'];
@@ -279,7 +268,7 @@ function silp_validate_options($input) {
 ?>
 
 <script>
-	function updatePlayer(project) {
+	function updatePlayer(project,silp_settings) {
 
 		var player = document.getElementById('player-area');
 		while (player.firstChild) {
@@ -294,7 +283,7 @@ function silp_validate_options($input) {
 		    var script = document.createElement('script');
 		    script.type = 'text/javascript';
 		    //script.src = createScriptSrc(params);
-		    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.martin.js?project='+project;
+		    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.martin.js?project='+project+silp_settings;
 		    player.appendChild(script);
 		}
 		else {
@@ -303,21 +292,36 @@ function silp_validate_options($input) {
 	}
 
 	function goEmbed() {
-	    var projectID = document.getElementById('silp_meta_box_select')
+
+		//Get project number
+	    var projectID = document.getElementById('silp_meta_box_select');
 		var project = projectID.options[projectID.selectedIndex].value;
 
+		//Get silp_settings from checkboxes
+		if(document.getElementById('silp_settings').getElementsByTagName('input')) {
+			var silp_settings_input = document.getElementById('silp_settings').getElementsByTagName('input');
+			var silp_settings_string = "";
 
-		var silp_settings = document.getElementById('silp_settings').getElementsByTagName('input')
-		// loop through each input element and output the value of any checkbox elements
-		 for (x = 0; x < silp_settings.length; x++) {
-			 if (silp_settings.item(x).type == 'checkbox') {
-			 	var input = silp_settings.item(x).value;
-			 	console.log(input);
-			 }
+			// loop through each checkbox and save key:value silp_settings_string
+			 for (x = 0; x < silp_settings_input.length; x++) {
+				 if (silp_settings_input.item(x).type == 'checkbox') {
+				 	// silp_settingsArr[silp_settings_input.item(x).name] = document.getElementById(silp_settings_input.item(x).name).checked;
+				 	silp_settings_string += "&"+silp_settings_input.item(x).name+"="+document.getElementById(silp_settings_input.item(x).name).checked;
+				 }
+			}
 		}
 
 
-		updatePlayer(project);
+		//Get silp_settings from ratio dropdown
+		if(document.getElementById('silp_ratio_box_select')) {
+			var ratioDiv = document.getElementById('silp_ratio_box_select');
+			var ratio = ratioDiv.options[ratioDiv.selectedIndex].value;
+			silp_settings_string += "&ratio="+ratio;
+		}
+
+
+
+		updatePlayer(project,silp_settings_string);
 
 	}
 
