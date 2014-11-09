@@ -46,7 +46,7 @@ function silp_meta_box_add() {
 //API call & drop down menu
 function silp_meta_box_cb( $post ) {
 	$values = get_post_custom( $post->ID );
-	$selected = isset( $values['silp_meta_box_select'] ) ? esc_attr( $values['silp_meta_box_select'][0] ) : '';
+	$selected = isset( $values['silp_project'] ) ? esc_attr( $values['silp_project'][0] ) : '';
 	$options = get_option('silp_options');
     $silp_client = $options['client'];
     $silp_token = $options['token'];
@@ -69,7 +69,7 @@ function silp_meta_box_cb( $post ) {
 	echo "<div style='float:left;'>Project:</div>";
 
 	echo "<div style='margin-left:60px;'>";
-	echo "<select name='silp_meta_box_select' id='silp_meta_box_select' onchange='goEmbed();'>\n\n";
+	echo "<select name='silp_project' id='silp_project' onchange='goEmbed();'>\n\n";
 	echo "\n\n<option value='0'>Select a project:</option>\n\n";
 
 	foreach($obj2[$silp_client] as $p) {
@@ -135,6 +135,7 @@ function silp_meta_box_cb( $post ) {
 	echo "</div>\n\n"; //silp_settings div
 
 	echo "<div id='player-area'>";
+	//hold our seected values
 	echo $embedcode;
 	echo "</div>\n\n";
 
@@ -165,31 +166,35 @@ function silp_meta_box_save( $post_id )
 	if( isset( $_POST['silp_meta_box_text'] ) )
 		update_post_meta( $post_id, 'silp_meta_box_text', wp_kses( $_POST['silp_meta_box_text'], $allowed ) );
 
-	if( isset( $_POST['silp_meta_box_select'] ) )
-		update_post_meta( $post_id, 'silp_meta_box_select', esc_attr( $_POST['silp_meta_box_select'] ) );
+	if( isset( $_POST['silp_project'] ) )
+		update_post_meta( $post_id, 'silp_project', esc_attr( $_POST['silp_project'] ) );
 
-	// This is purely my personal preference for saving checkboxes
-	$chk = ( isset( $_POST['silp_meta_box_check'] ) && $_POST['silp_meta_box_check'] ) ? 'on' : 'off';
-	update_post_meta( $post_id, 'silp_meta_box_check', $chk );
+	// Saving the current silp_params to db. So we can get them later ad display the admin silp accordingly
+	if( isset( $_POST['silp_params'] ) )
+	update_post_meta( $post_id, 'silp_params', $_POST['silp_params'] );
+
+	//Saving the embed code
+	if( isset( $_POST['silp_project'] ) ) {
+		global $post;
+		$project = get_post_meta($post->ID, 'silp_project', true);
+		$options = get_option('silp_options');
+		$silp_client = $options['client'];
+		$silp_token = $options['token'];
+		$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true&project=".$project;
+		//if user have changes silp settings, we're passing them to the api-call when reuqesting embed code and store in db
+		if( isset( $_POST['silp_params'] ) ) $silp_call .= $_POST['silp_params'];
+		$json_data2 = file_get_contents($silp_call);
+		$obj3=json_decode($json_data2, true);
+
+		update_post_meta( $post_id, 'silp_embed', $obj3[$silp_client][0][embed] );
+	}
+
 }
-
-
 
 //[silp]
 function silp_embed()  {
-
 	global $post;
-	$project = get_post_meta($post->ID, 'silp_meta_box_select', true);
-	$testArr = get_post_meta($post->ID, 'silp_meta_box_select', true);
-	$options = get_option('silp_options');
-	$silp_client = $options['client'];
-	$silp_token = $options['token'];
-	// echo $silp_token;
-	$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true&project=".$project;
-	$json_data2 = file_get_contents($silp_call);
-	$obj3=json_decode($json_data2, true);
-
-	return $obj3[$silp_client][0][embed];
+	return get_post_meta($post->ID, 'silp_embed', true);
 
 }
 
@@ -268,6 +273,7 @@ function silp_validate_options($input) {
 ?>
 
 <script>
+
 	function updatePlayer(project,silp_settings) {
 
 		var player = document.getElementById('player-area');
@@ -282,9 +288,22 @@ function silp_validate_options($input) {
 		    player.style.display = 'block';
 		    var script = document.createElement('script');
 		    script.type = 'text/javascript';
-		    //script.src = createScriptSrc(params);
-		    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.martin.js?project='+project+silp_settings;
+		    <?
+		    $options = get_option('silp_options');
+		    $client = $options['client'];
+		    ?>
+		    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.<?echo $client;?>.js?project='+project+silp_settings;
 		    player.appendChild(script);
+
+		    //creating a hidden input that will hold our silp_params
+		    var input = document.createElement('input');
+		    input.type = 'hidden';
+		    input.id = 'silp_params';
+		    input.name = 'silp_params';
+		    input.value = silp_settings;
+		    player.appendChild(input);
+
+
 		}
 		else {
 			player.style.display = 'none';
@@ -294,7 +313,7 @@ function silp_validate_options($input) {
 	function goEmbed() {
 
 		//Get project number
-	    var projectID = document.getElementById('silp_meta_box_select');
+	    var projectID = document.getElementById('silp_project');
 		var project = projectID.options[projectID.selectedIndex].value;
 
 		//Get silp_settings from checkboxes
@@ -305,7 +324,6 @@ function silp_validate_options($input) {
 			// loop through each checkbox and save key:value silp_settings_string
 			 for (x = 0; x < silp_settings_input.length; x++) {
 				 if (silp_settings_input.item(x).type == 'checkbox') {
-				 	// silp_settingsArr[silp_settings_input.item(x).name] = document.getElementById(silp_settings_input.item(x).name).checked;
 				 	silp_settings_string += "&"+silp_settings_input.item(x).name+"="+document.getElementById(silp_settings_input.item(x).name).checked;
 				 }
 			}
