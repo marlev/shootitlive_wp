@@ -231,8 +231,7 @@ function silp_content($content = '') {
 //Settings page content
 add_action("admin_menu","silp_admin_menu");
 function silp_admin_menu(){
-	add_menu_page(/*page title*/'Dashboard', /*Menu Title*/'Shootitlive',/*access*/'administrator', 'shootitlive', 'silp_dashboard_page',plugins_url('sil.ico', __FILE__));
-	add_submenu_page( 'shootitlive', 'Settings', 'Settings', 'administrator', 'dashboard', 'silp_settings_page' );
+	add_menu_page(/*page title*/'Dashboard', /*Menu Title*/'Shootitlive',/*access*/'administrator', 'shootitlive', 'silp_settings_page',plugins_url('sil.ico', __FILE__));
 }
 
 function silp_settings_page() { /*handler for above menu item*/
@@ -272,13 +271,6 @@ function silp_settings_page() { /*handler for above menu item*/
 			</p>
 		</form>
 	</div>
-	<?
-}
-
-
-function silp_dashboard_page() { /*handler for above menu item*/
-	?>
-	<iframe src="http://admin.shootitlive.com/projects" frameBorder="0" marginwidth="0px" marginheight="0px" scrolling="yes" width="100%" height="100%"></iframe>
 	<?
 }
 
