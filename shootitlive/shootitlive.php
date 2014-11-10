@@ -47,9 +47,27 @@ function silp_meta_box_add() {
 function silp_meta_box_cb( $post ) {
 	$values = get_post_custom( $post->ID );
 	$selected = isset( $values['silp_project'] ) ? esc_attr( $values['silp_project'][0] ) : '';
+	$silp_params = isset( $values['silp_params'] ) ? $values['silp_params'][0] : '';
 	$options = get_option('silp_options');
     $silp_client = $options['client'];
     $silp_token = $options['token'];
+
+
+    /*
+    If the post already have a silp embedded, we look if there's
+    custom silp_options present and then store them in the $silp_paramsDB array
+    as we need to make current silp adopt those stored options and the
+    checkboxes/dropdown have those values checked.
+    */
+	if($silp_params) {
+		$silp_paramsDB = explode('&',$silp_params);
+		foreach ($silp_paramsDB as $key) {
+			 if($key) {
+			 	$key = explode('=',$key);
+			 	$silp_paramsDB[$key[0]] = $key[1];
+			 }
+		}
+	}
 
 	if ($options['client'] =='Enter Organisation Name' or $options['client'] =='') {
 		//nothing here
@@ -58,6 +76,7 @@ function silp_meta_box_cb( $post ) {
 
 	else {
 		$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true";
+		if($silp_params) $silp_call .= $silp_params; //add the stored DB silp_params to api call
 		$json_data2 = file_get_contents($silp_call);
 		$obj2=json_decode($json_data2, true);
 
@@ -83,7 +102,8 @@ function silp_meta_box_cb( $post ) {
 
 	echo "</select>";
 	echo "</div>\n\n";
-
+	$checkboxHtml;
+	$ratioHtml;
 
 	foreach ($obj2[silp_options] as $key => $value) {
 		$hiddenArr = explode(',', $obj2[silp_options][hidden]); //convert "hidden" to an array
@@ -92,8 +112,8 @@ function silp_meta_box_cb( $post ) {
 			if(is_bool($value) || $key == "ratio") { //only include key with true/false value and the ratio key
 
 				if($key !="ratio") {
-					$checkboxHtml = "<div style='margin-left:60px;'>\n";
-					$checked = ($value == true) ? "checked" : "";
+					$checkboxHtml .= "<div style='margin-left:60px;'>\n";
+					$checked = ($value) ? "checked" : "";
 					$checkboxHtml .= "<input type='checkbox' id='".$key."' name='".$key."' onchange='goEmbed();' value='".$value."' ".$checked."> ".$key."\n";
 					$checkboxHtml .= "</div>\n";
 				}
@@ -108,7 +128,7 @@ function silp_meta_box_cb( $post ) {
 					if($value == 1.7777777778) $valueDescription = "Wide";
 					if($value == 1) $valueDescription = "Square";
 
-					$ratioHtml = "<div style='margin-left:60px;'>\n";
+					$ratioHtml .= "<div style='margin-left:60px;'>\n";
 
 					$ratioHtml .= "<select name='silp_ratio_box_select' id='silp_ratio_box_select' onchange='goEmbed();'>\n\n";
 					$ratioHtml .= "<option value='".$value."' selected='selected'>".$valueDescription."</option>\n";
