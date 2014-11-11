@@ -1,11 +1,29 @@
 <?php
+defined('ABSPATH') or die("No script kiddies please!");
 /*
 Plugin Name: Shootitlive
-Plugin URI: http://shootitlive.com/shootitlive_wp
+Plugin URI: http://shootitlive.com
 Description: Plugin for embedding live feeds from Shootitlive.com
 Author: Martin Levy
 Version: 1.0
 Author URI: http://shootitlive.com
+License: GPL2
+*/
+
+/*  Copyright 2014  Martin Levy  (email : martin@shootitlive.com)
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License, version 2, as
+    published by the Free Software Foundation.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 register_activation_hook(__FILE__, 'silp_add_defaults');
@@ -95,21 +113,21 @@ function silp_meta_box_cb( $post ) {
 		echo "\n\n<option value='0'>Select a project:</option>\n\n";
 
 		foreach($obj2[$silp_client] as $p) {
-			echo "<option value='".$p[project]."'".selected( $selected, $p[project]).">";
+			echo "<option value='".$p["project"]."'".selected( $selected, $p["project"]).">";
 			//limit project description to 23chars, so it fits in dropdown
-			$description = (strlen($p[description]) > 23) ? substr($p[description],0,19).'...' : $p[description];
+			$description = (strlen($p["description"]) > 23) ? substr($p["description"],0,19).'...' : $p["description"];
 			echo $description;
 			echo "</option>\n";
-			if($selected == $p[project]) $embedcode = $p[embed];
+			if($selected == $p["project"]) $embedcode = $p["embed"];
 		}
 
 		echo "</select>";
 		echo "</div>\n\n";
-		$checkboxHtml;
-		$ratioHtml;
+		$checkboxHtml ='';
+		$ratioHtml ='';
 
-		foreach ($obj2[silp_options] as $key => $value) {
-			$hiddenArr = explode(',', $obj2[silp_options][hidden]); //convert "hidden" to an array
+		foreach ($obj2["silp_options"] as $key => $value) {
+			$hiddenArr = explode(',', $obj2["silp_options"]["hidden"]); //convert "hidden" to an array
 			if(!in_array($key, (array)$hiddenArr)) { //only list not hidden silp_options
 
 				if(is_bool($value) || $key == "ratio") { //only include key with true/false value and the ratio key
