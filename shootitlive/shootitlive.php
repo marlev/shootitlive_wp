@@ -69,121 +69,122 @@ function silp_meta_box_cb( $post ) {
 		}
 	}
 
+	//If there's no API info provided
 	if ($options['client'] =='Enter Organisation Name' or $options['client'] =='') {
-		//nothing here
 		echo "Please, enter API settings";
 	}
 
 	else {
 		$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true";
 		if($silp_params) $silp_call .= $silp_params; //add the stored DB silp_params to api call
-		$json_data2 = file_get_contents($silp_call);
+		$json_data2 = @file_get_contents($silp_call);
+	}
+
+	//If provided API info is incorrect
+	if($json_data2 === false) echo "Please check your API settings";
+
+
+	if($json_data2 != false) {
 		$obj2=json_decode($json_data2, true);
+		wp_nonce_field( 'silp_meta_box_nonce', 'meta_box_nonce' );
 
-	}
+		echo "<div style='float:left;'>Project:</div>";
 
-	wp_nonce_field( 'silp_meta_box_nonce', 'meta_box_nonce' );
+		echo "<div style='margin-left:60px;'>";
+		echo "<select name='silp_project' id='silp_project' onchange='goEmbed();'>\n\n";
+		echo "\n\n<option value='0'>Select a project:</option>\n\n";
 
+		foreach($obj2[$silp_client] as $p) {
+			echo "<option value='".$p[project]."'".selected( $selected, $p[project]).">";
+			//limit project description to 23chars, so it fits in dropdown
+			$description = (strlen($p[description]) > 23) ? substr($p[description],0,19).'...' : $p[description];
+			echo $description;
+			echo "</option>\n";
+			if($selected == $p[project]) $embedcode = $p[embed];
+		}
 
-	echo "<div style='float:left;'>Project:</div>";
+		echo "</select>";
+		echo "</div>\n\n";
+		$checkboxHtml;
+		$ratioHtml;
 
-	echo "<div style='margin-left:60px;'>";
-	echo "<select name='silp_project' id='silp_project' onchange='goEmbed();'>\n\n";
-	echo "\n\n<option value='0'>Select a project:</option>\n\n";
+		foreach ($obj2[silp_options] as $key => $value) {
+			$hiddenArr = explode(',', $obj2[silp_options][hidden]); //convert "hidden" to an array
+			if(!in_array($key, (array)$hiddenArr)) { //only list not hidden silp_options
 
-	foreach($obj2[$silp_client] as $p) {
-		echo "<option value='".$p[project]."'".selected( $selected, $p[project]).">";
-		//limit project description to 23chars, so it fits in dropdown
-		$description = (strlen($p[description]) > 23) ? substr($p[description],0,19).'...' : $p[description];
-		echo $description;
-		echo "</option>\n";
-		if($selected == $p[project]) $embedcode = $p[embed];
-	}
+				if(is_bool($value) || $key == "ratio") { //only include key with true/false value and the ratio key
 
-	echo "</select>";
-	echo "</div>\n\n";
-	$checkboxHtml;
-	$ratioHtml;
+					if($key !="ratio") {
+						$checkboxHtml .= "<div style='margin-left:60px;'>\n";
+						$checked = ($value) ? "checked" : "";
+						$checkboxHtml .= "<input type='checkbox' id='".$key."' name='".$key."' onchange='goEmbed();' value='".$value."' ".$checked."> ".$key."\n";
+						$checkboxHtml .= "</div>\n";
+					}
 
-	foreach ($obj2[silp_options] as $key => $value) {
-		$hiddenArr = explode(',', $obj2[silp_options][hidden]); //convert "hidden" to an array
-		if(!in_array($key, (array)$hiddenArr)) { //only list not hidden silp_options
+					if($key =="ratio") {
+						/*
+						Instead of printing the ratio dropdown immediately
+						we print the output below to make sure it displays
+						as the last option - this is just for looks
+						*/
+						if($value == 1.5) $valueDescription = "Standard";
+						if($value == 1.7777777778) $valueDescription = "Wide";
+						if($value == 1) $valueDescription = "Square";
 
-			if(is_bool($value) || $key == "ratio") { //only include key with true/false value and the ratio key
+						$ratioHtml .= "<div style='margin-left:60px;'>\n";
 
-				if($key !="ratio") {
-					$checkboxHtml .= "<div style='margin-left:60px;'>\n";
-					$checked = ($value) ? "checked" : "";
-					$checkboxHtml .= "<input type='checkbox' id='".$key."' name='".$key."' onchange='goEmbed();' value='".$value."' ".$checked."> ".$key."\n";
-					$checkboxHtml .= "</div>\n";
+						$ratioHtml .= "<select name='silp_ratio_box_select' id='silp_ratio_box_select' onchange='goEmbed();'>\n\n";
+						$ratioHtml .= "<option value='".$value."' selected='selected'>".$valueDescription."</option>\n";
+						if($value != 1.5) $ratioHtml .= "<option value='1.5'>Standard</option>\n";
+						if($value != 1.7777777778) $ratioHtml .= "<option value='1.7777777778'>Wide</option>\n";
+						if($value != 1) $ratioHtml .= "<option value='1'>Square</option>\n";
+						$ratioHtml .= "</select>";
+						$ratioHtml .= " ".$key."\n";
+
+						$ratioHtml .= "</div>\n";
+					}
+
 				}
+	 		}
+		}
+		echo "<div id='silp_settings'>\n";
 
-				if($key =="ratio") {
-					/*
-					Instead of printing the ratio dropdown immediately
-					we print the output below to make sure it displays
-					as the last option - this is just for looks
-					*/
-					if($value == 1.5) $valueDescription = "Standard";
-					if($value == 1.7777777778) $valueDescription = "Wide";
-					if($value == 1) $valueDescription = "Square";
+		echo "<div style='float:left;' id='options-area'>";
 
-					$ratioHtml .= "<div style='margin-left:60px;'>\n";
+		//only ouput "Option" if we have silp_settings to display
+		if( ($checkboxHtml) || ($checkboxHtml) ) echo "Options:";
 
-					$ratioHtml .= "<select name='silp_ratio_box_select' id='silp_ratio_box_select' onchange='goEmbed();'>\n\n";
-					$ratioHtml .= "<option value='".$value."' selected='selected'>".$valueDescription."</option>\n";
-					if($value != 1.5) $ratioHtml .= "<option value='1.5'>Standard</option>\n";
-					if($value != 1.7777777778) $ratioHtml .= "<option value='1.7777777778'>Wide</option>\n";
-					if($value != 1) $ratioHtml .= "<option value='1'>Square</option>\n";
-					$ratioHtml .= "</select>";
-					$ratioHtml .= " ".$key."\n";
+		if($checkboxHtml) echo $checkboxHtml;
+		if($ratioHtml) echo $ratioHtml;
 
-					$ratioHtml .= "</div>\n";
-				}
+		echo "</div></div>\n\n"; //silp_settings div
 
-			}
- 		}
-	}
-	echo "<div id='silp_settings'>\n";
+		echo "<div id='player-area' style='margin-top:40px;'>";
+		//hold our seected values
+		echo $embedcode;
+		echo "</div>\n\n";
 
-	echo "<div style='float:left;' id='options-area'>";
+		echo "<div style='' id='placement-area'>";
+		echo "Placement:";
 
-	//only ouput "Option" if we have silp_settings to display
-	if( ($checkboxHtml) || ($checkboxHtml) ) echo "Options:";
+		//Placement radiobutton. Grab default from DB if present
+		$placement = (get_post_meta($post->ID, 'silp_placement', true)) ? get_post_meta($post->ID, 'silp_placement', true) : '';
+		echo "<div style='margin-left:60px;'>";
+		echo "<input type='radio' name='silp_placement' value='top' ";
+		if( ($placement == 'top') || ($placement == '') ) echo "checked";
+		echo ">top";
+		echo "</div>";
 
-	if($checkboxHtml) echo $checkboxHtml;
-	if($ratioHtml) echo $ratioHtml;
+		echo "<div style='margin-left:60px;'>";
+		echo "<input type='radio' name='silp_placement' value='bottom' ";
+		if($placement == 'bottom') echo "checked";
+		echo ">bottom";
+		echo "</div>";
 
-	echo "</div></div>\n\n"; //silp_settings div
+		echo "</div>\n\n";
 
-	echo "<div id='player-area' style='margin-top:40px;'>";
-	//hold our seected values
-	echo $embedcode;
-	echo "</div>\n\n";
-
-	echo "<div style='' id='placement-area'>";
-	echo "Placement:";
-
-	//Placement radiobutton. Grab default from DB if present
-	$placement = (get_post_meta($post->ID, 'silp_placement', true)) ? get_post_meta($post->ID, 'silp_placement', true) : '';
-	echo "<div style='margin-left:60px;'>";
-	echo "<input type='radio' name='silp_placement' value='top' ";
-	if( ($placement == 'top') || ($placement == '') ) echo "checked";
-	echo ">top";
-	echo "</div>";
-
-	echo "<div style='margin-left:60px;'>";
-	echo "<input type='radio' name='silp_placement' value='bottom' ";
-	if($placement == 'bottom') echo "checked";
-	echo ">bottom";
-	echo "</div>";
-
-
-	echo "</div>\n\n";
-
-
-}
-
+	}//end if we have a correct api client/token
+}//end function
 
 // SAVE the meta_box value
 add_action( 'save_post', 'silp_meta_box_save' );
