@@ -11,6 +11,7 @@ Simplify embedding of Shootitlive galleries on Wordpress sites.
 Shootitlive is a CMS designed to help publishers manage their live media feeds. In other words, a platform for publishing video and photos online in a responsive html5 player.
 
 To be able to use the plugin you need to have an account over at Shootitlive. Sign up for free at http://shootitlive.com/signup/
+Test the functionality  without your own API credentials by using **API Organization Name:** marca and **API Key:** bca189b0bd7c66e82598f59378d4e1962df718a4
 
 == Installation ==
 1. Install the plugin via the WordPress.org plugin directory.
