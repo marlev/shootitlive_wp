@@ -299,7 +299,7 @@ function silp_content($content = '') {
 //Settings page content
 add_action("admin_menu","silp_admin_menu");
 function silp_admin_menu(){
-	add_menu_page(/*page title*/'Dashboard', /*Menu Title*/'Shootitlive',/*access*/'administrator', 'shootitlive', 'silp_settings_page',plugins_url('sil.ico', __FILE__));
+	add_menu_page(/*page title*/'Dashboard', /*Menu Title*/'Shootitlive',/*access*/'administrator', 'shootitlive', 'silp_settings_page',plugins_url('assets/sil.ico', __FILE__));
 }
 
 function silp_settings_page() { /*handler for above menu item*/
