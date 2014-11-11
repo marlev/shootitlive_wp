@@ -336,6 +336,7 @@ function silp_validate_options($input) {
 		var player = document.getElementById('player-area');
 		var option_area = document.getElementById('options-area')
 		var placement_area = document.getElementById('placement-area')
+		var project_area = document.getElementById('silp_project');
 		while (player.firstChild) {
 		    player.removeChild(player.firstChild);
 		}
@@ -347,6 +348,8 @@ function silp_validate_options($input) {
 	    	//Lets display our option & placement div's
 	    	if(option_area) option_area.style.display = 'block';
 	    	if(placement_area) placement_area.style.display = 'block';
+
+	    	project_area.options[0].text = "Remove player from post";
 
 		    player.style.display = 'block';
 		    var script = document.createElement('script');
@@ -370,6 +373,7 @@ function silp_validate_options($input) {
 			//if project = 0, we're hiding the options area & placement area and remove the silp
 			if(option_area) option_area.style.display = 'none';
 			if(placement_area) placement_area.style.display = 'none';
+			project_area.options[0].text = "Select a project:";
 			player.style.display = 'none';
 		}
 	}
