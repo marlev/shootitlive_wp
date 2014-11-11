@@ -150,37 +150,34 @@ function silp_meta_box_cb( $post ) {
 		echo "<div id='silp_settings'>\n";
 
 		echo "<div style='float:left;' id='options-area'>";
-
 		//only ouput "Option" if we have silp_settings to display
 		if( ($checkboxHtml) || ($checkboxHtml) ) echo "Options:";
-
 		if($checkboxHtml) echo $checkboxHtml;
 		if($ratioHtml) echo $ratioHtml;
+		echo "</div>"; //options-area
 
-		echo "</div></div>\n\n"; //silp_settings div
-
-		echo "<div id='player-area' style='margin-top:40px;'>";
-		//hold our seected values
-		echo $embedcode;
-		echo "</div>\n\n";
-
-		echo "<div style='' id='placement-area'>";
-		echo "Placement:";
-
+		echo "<div style='float:left;margin-top:5px;' id='placement-area'>";
 		//Placement radiobutton. Grab default from DB if present
 		$placement = (get_post_meta($post->ID, 'silp_placement', true)) ? get_post_meta($post->ID, 'silp_placement', true) : '';
+
 		echo "<div style='margin-left:60px;'>";
 		echo "<input type='radio' name='silp_placement' value='top' ";
 		if( ($placement == 'top') || ($placement == '') ) echo "checked";
-		echo ">top";
+		echo ">top of post";
 		echo "</div>";
 
 		echo "<div style='margin-left:60px;'>";
 		echo "<input type='radio' name='silp_placement' value='bottom' ";
 		if($placement == 'bottom') echo "checked";
-		echo ">bottom";
+		echo ">bottom of post";
 		echo "</div>";
 
+		echo "</div>\n\n";//placement-area
+
+		echo "</div>\n\n"; //silp_settings div
+
+		echo "<div id='player-area' style='margin-top:40px;'>";
+		echo $embedcode;
 		echo "</div>\n\n";
 
 	}//end if we have a correct api client/token
