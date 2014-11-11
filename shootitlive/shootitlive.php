@@ -146,18 +146,41 @@ function silp_meta_box_cb( $post ) {
 	}
 	echo "<div id='silp_settings'>\n";
 
+	echo "<div style='float:left;' id='options-area'>";
+
 	//only ouput "Option" if we have silp_settings to display
-	if( ($checkboxHtml) || ($checkboxHtml) ) echo "<div style='float:left;'>Options:</div>\n";
+	if( ($checkboxHtml) || ($checkboxHtml) ) echo "Options:";
 
 	if($checkboxHtml) echo $checkboxHtml;
 	if($ratioHtml) echo $ratioHtml;
 
-	echo "</div>\n\n"; //silp_settings div
+	echo "</div></div>\n\n"; //silp_settings div
 
-	echo "<div id='player-area'>";
+	echo "<div id='player-area' style='margin-top:40px;'>";
 	//hold our seected values
 	echo $embedcode;
 	echo "</div>\n\n";
+
+	echo "<div style='' id='placement-area'>";
+	echo "Placement:";
+
+	//Placement radiobutton. Grab default from DB if present
+	$placement = (get_post_meta($post->ID, 'silp_placement', true)) ? get_post_meta($post->ID, 'silp_placement', true) : '';
+	echo "<div style='margin-left:60px;'>";
+	echo "<input type='radio' name='silp_placement' value='top' ";
+	if( ($placement == 'top') || ($placement == '') ) echo "checked";
+	echo ">top";
+	echo "</div>";
+
+	echo "<div style='margin-left:60px;'>";
+	echo "<input type='radio' name='silp_placement' value='bottom' ";
+	if($placement == 'bottom') echo "checked";
+	echo ">bottom";
+	echo "</div>";
+
+
+	echo "</div>\n\n";
+
 
 }
 
@@ -193,20 +216,35 @@ function silp_meta_box_save( $post_id )
 	if( isset( $_POST['silp_params'] ) )
 	update_post_meta( $post_id, 'silp_params', $_POST['silp_params'] );
 
+	// Saving the current silp_placement to db.
+	if( isset( $_POST['silp_placement'] ) )
+	update_post_meta( $post_id, 'silp_placement', $_POST['silp_placement'] );
+
 	//Saving the embed code
 	if( isset( $_POST['silp_project'] ) ) {
 		global $post;
 		$project = get_post_meta($post->ID, 'silp_project', true);
-		$options = get_option('silp_options');
-		$silp_client = $options['client'];
-		$silp_token = $options['token'];
-		$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true&project=".$project;
-		//if user have changes silp settings, we're passing them to the api-call when reuqesting embed code and store in db
-		if( isset( $_POST['silp_params'] ) ) $silp_call .= $_POST['silp_params'];
-		$json_data2 = file_get_contents($silp_call);
-		$obj3=json_decode($json_data2, true);
 
-		update_post_meta( $post_id, 'silp_embed', $obj3[$silp_client][0][embed] );
+		if($project != "0") {
+			$options = get_option('silp_options');
+			$silp_client = $options['client'];
+			$silp_token = $options['token'];
+			$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true&project=".$project;
+			//if user have changes silp settings, we're passing them to the api-call when reuqesting embed code and store in db
+			if( isset( $_POST['silp_params'] ) ) $silp_call .= $_POST['silp_params'];
+			$json_data2 = file_get_contents($silp_call);
+			$obj3=json_decode($json_data2, true);
+
+			update_post_meta( $post_id, 'silp_embed', $obj3[$silp_client][0][embed] );
+		}
+
+		if($project == "0") {
+			//if we've unset the silp, lets remove all db entrys
+			if(get_post_meta($post->ID, 'silp_project', true)) update_post_meta( $post_id, 'silp_project', '' );
+			if(get_post_meta($post->ID, 'silp_embed', true)) update_post_meta( $post_id, 'silp_embed', '' );
+			if(get_post_meta($post->ID, 'silp_params', true)) update_post_meta( $post_id, 'silp_params', '' );
+			if(get_post_meta($post->ID, 'silp_placement', true)) update_post_meta( $post_id, 'silp_placement', '' );
+		}
 	}
 
 }
@@ -224,7 +262,21 @@ add_shortcode( 'silp', 'silp_embed' );
 add_filter('the_content', 'silp_content');
 
 function silp_content($content = '') {
-	$content .= do_shortcode("[silp]");
+	global $post;
+	$placement = get_post_meta($post->ID, 'silp_placement', true);
+
+	//Silp in top of post
+	if( ($placement == 'top') || (!$placement) ){
+		$content = do_shortcode("[silp]").$content;
+	}
+
+	//Silp in bottom of post
+	if( $placement == 'bottom') {
+		$content .= do_shortcode("[silp]");
+	}
+
+	// $content .= do_shortcode("[silp]");
+
 	return $content;
 }
 
@@ -235,36 +287,29 @@ function silp_admin_menu(){
 }
 
 function silp_settings_page() { /*handler for above menu item*/
-
 	?>
 	<div class="wrap">
 		<!-- Display Plugin Icon, Header, and Description -->
 		<div class="icon32" id="icon-options-general"><br></div>
 		<h2>Shootitlive</h2>
-
 		<!-- Beginning of the Plugin Options Form -->
 		<form method="post" action="options.php">
 			<?php settings_fields('silp_plugin_options'); ?>
 			<?php $options = get_option('silp_options'); ?>
 
-			<!-- Table Structure Containing Form Controls -->
-			<!-- Each Plugin Option Defined on a New Table Row -->
 			<table class="form-table">
-				<!-- Textbox Control -->
 				<tr>
 					<th scope="row">Enter Organisation Name:</th>
 					<td>
 						<input type="text" size="57" name="silp_options[client]" value="<?php echo $options['client']; ?>" />
 					</td>
 				</tr>
-
 				<tr>
 					<th scope="row">Enter API Key:</th>
 					<td>
 						<input type="text" size="57" name="silp_options[token]" value="<?php echo $options['token']; ?>" />
 					</td>
 				</tr>
-
 			</table>
 			<p class="submit">
 			<input type="submit" class="button-primary" value="<?php _e('Save Changes') ?>" />
@@ -285,10 +330,14 @@ function silp_validate_options($input) {
 ?>
 
 <script>
+	window.onload = function(){
+		goEmbed(); //This is mainly do remove the option-div when there's no project set in dropdown
+	}
 
 	function updatePlayer(project,silp_settings) {
-
 		var player = document.getElementById('player-area');
+		var option_area = document.getElementById('options-area')
+		var placement_area = document.getElementById('placement-area')
 		while (player.firstChild) {
 		    player.removeChild(player.firstChild);
 		}
@@ -297,6 +346,10 @@ function silp_validate_options($input) {
 	    if(window.Silp) window.Silp = {};
 
 	    if(project != 0) {
+	    	//Lets display our option & placement div's
+	    	if(option_area) option_area.style.display = 'block';
+	    	if(placement_area) placement_area.style.display = 'block';
+
 		    player.style.display = 'block';
 		    var script = document.createElement('script');
 		    script.type = 'text/javascript';
@@ -314,10 +367,11 @@ function silp_validate_options($input) {
 		    input.name = 'silp_params';
 		    input.value = silp_settings;
 		    player.appendChild(input);
-
-
 		}
 		else {
+			//if project = 0, we're hiding the options area & placement area and remove the silp
+			if(option_area) option_area.style.display = 'none';
+			if(placement_area) placement_area.style.display = 'none';
 			player.style.display = 'none';
 		}
 	}
@@ -348,7 +402,6 @@ function silp_validate_options($input) {
 			var ratio = ratioDiv.options[ratioDiv.selectedIndex].value;
 			silp_settings_string += "&ratio="+ratio;
 		}
-
 
 
 		updatePlayer(project,silp_settings_string);
