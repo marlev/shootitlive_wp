@@ -2,6 +2,7 @@
 Tags: cms,video,photos,livepublishing
 Requires at least: 3.0
 Tested up to: 4.0
+Stable tag: 1.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,4 +24,20 @@ Test the functionality  without your own API credentials by using **API Organiza
 2. This screen shot displays the Shootitlive settings page
 
 == Changelog ==
-0.1 First version
+
+= 1.1 =
+* Bumping version number
+
+= 0.2 =
+* Bug fixes. Only load js script when creating or editing posts
+
+= 0.1 =
+* First version
+
+== Upgrade Notice ==
+
+= 1.1 =
+* Fixed bug in 0.2 release and bumping verison number.
+
+
+
