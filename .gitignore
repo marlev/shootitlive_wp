@@ -2,3 +2,4 @@
 deploy.sh
 
 id_dsa.deploy
+/svn/*
