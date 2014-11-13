@@ -343,6 +343,10 @@ function silp_validate_options($input) {
 	return $input;
 }
 
+
+//only load script if we're on post page
+global $pagenow;
+if (! empty($pagenow) && ('post-new.php' === $pagenow || 'post.php' === $pagenow )) {
 ?>
 
 <script>
@@ -429,3 +433,6 @@ function silp_validate_options($input) {
 	}
 
 </script>
+<?
+} //end script load
+?>
