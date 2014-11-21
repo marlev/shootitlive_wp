@@ -30,6 +30,7 @@ register_activation_hook(__FILE__, 'silp_add_defaults');
 register_uninstall_hook(__FILE__, 'silp_delete_plugin_options');
 add_action('admin_init', 'silp_init' );
 define('apiBaseUrl', 'http://cdn.api.shootitlive.com');
+define('silp_option_params', 'share,ads,ratio,thumbnails'); //What options to display in page
 
 // Delete options table entries ONLY when plugin deactivated AND deleted
 function silp_delete_plugin_options() {
@@ -87,6 +88,7 @@ function silp_meta_box_cb( $post ) {
 		}
 	}
 
+
 	//If there's no API info provided
 	if ($options['client'] =='Enter Organisation Name' or $options['client'] =='') {
 		echo "Please, enter API settings";
@@ -126,45 +128,86 @@ function silp_meta_box_cb( $post ) {
 		$checkboxHtml ='';
 		$ratioHtml ='';
 
+		function createCheckbox($name, $value) {
+			$html = "<div style='margin-left:60px;'>\n";
+			$checked = ($value) ? "checked" : "";
+			$html .= "<input type='checkbox' id='".$name."' name='".$name."' onchange='goEmbed();' value='".$value."' ".$checked."> ".$name."\n";
+			$html .= "</div>\n";
+			return $html;
+		}
+
+		function createRatio($name, $value) {
+			if($value == 1.5) $valueDescription = "Standard";
+			if($value == 1.7777777778) $valueDescription = "Wide";
+			if($value == 1) $valueDescription = "Square";
+			$html = "<div style='margin-left:60px;'>\n";
+
+			$html .= "<select name='silp_ratio_box_select' id='silp_ratio_box_select' onchange='goEmbed();'>\n\n";
+			$html .= "<option value='".$value."' selected='selected'>".$valueDescription."</option>\n";
+
+			if($valueDescription != "Standard") $html .= "<option value='1.5'>Standard</option>\n";
+			if($valueDescription != "Wide") $html .= "<option value='1.7777777778'>Wide</option>\n";
+			if($valueDescription != "Square") $html .= "<option value='1'>Square</option>\n";
+			$html .= "</select>";
+			//$html .= " ".$name."\n";
+			$html .= "</div>\n";
+
+			return $html;
+		}
+
+
+		$silp_option_params = explode(',', silp_option_params); //Getting what checkboxes to display from admin
 		foreach ($obj2["silp_options"] as $key => $value) {
+			$display = true;
 			$hiddenArr = explode(',', $obj2["silp_options"]["hidden"]); //convert "hidden" to an array
 			if(!in_array($key, (array)$hiddenArr)) { //only list not hidden silp_options
 
 				if(is_bool($value) || $key == "ratio") { //only include key with true/false value and the ratio key
 
-					if($key !="ratio") {
-						$checkboxHtml .= "<div style='margin-left:60px;'>\n";
-						$checked = ($value) ? "checked" : "";
-						$checkboxHtml .= "<input type='checkbox' id='".$key."' name='".$key."' onchange='goEmbed();' value='".$value."' ".$checked."> ".$key."\n";
-						$checkboxHtml .= "</div>\n";
+					/*
+					From plugin settings page, we're checking what default options to display.
+					These settings will overrule the settings from admin.
+					If we have other silp options from api (that not present at all in plugin settings page)
+					We will
+					*/
+					if(in_array($key, $silp_option_params)) {
+						$silp_option_params = array_diff($silp_option_params, array($key));
+						if(!$options[$key]) $display = false;
 					}
 
-					if($key =="ratio") {
-						/*
-						Instead of printing the ratio dropdown immediately
-						we print the output below to make sure it displays
-						as the last option - this is just for looks
-						*/
-						if($value == 1.5) $valueDescription = "Standard";
-						if($value == 1.7777777778) $valueDescription = "Wide";
-						if($value == 1) $valueDescription = "Square";
 
-						$ratioHtml .= "<div style='margin-left:60px;'>\n";
-
-						$ratioHtml .= "<select name='silp_ratio_box_select' id='silp_ratio_box_select' onchange='goEmbed();'>\n\n";
-						$ratioHtml .= "<option value='".$value."' selected='selected'>".$valueDescription."</option>\n";
-						if($value != 1.5) $ratioHtml .= "<option value='1.5'>Standard</option>\n";
-						if($value != 1.7777777778) $ratioHtml .= "<option value='1.7777777778'>Wide</option>\n";
-						if($value != 1) $ratioHtml .= "<option value='1'>Square</option>\n";
-						$ratioHtml .= "</select>";
-						$ratioHtml .= " ".$key."\n";
-
-						$ratioHtml .= "</div>\n";
+					if( ($key !="ratio") && ($display) ) {
+						$checkboxHtml .= createCheckbox($key, $value);
 					}
+
+					if( ($key =="ratio") && ($display) ) {
+						$ratioHtml .= createRatio($key, $value);
+					}
+
 
 				}
 	 		}
 		}
+
+		//Adding silp params options that not present in API, but on settings page.
+		foreach ($silp_option_params as $key => $value) {
+			$key = $value;
+			$value = $options[$key];
+
+			//Add option if checkbox on plugn settings page is ticked.
+			if($value) {
+				if( ($key !="ratio") && ($display) ) {
+				$checkboxHtml .= createCheckbox($key, $value);
+				}
+
+				if( ($key =="ratio") && ($display) ) {
+					$ratioHtml .= createRatio($key, $value);
+				}
+			}
+
+		}
+
+
 		echo "<div id='silp_settings'>\n";
 
 		echo "<div style='float:left;' id='options-area'>";
@@ -175,6 +218,7 @@ function silp_meta_box_cb( $post ) {
 		echo "</div>"; //options-area
 
 		echo "<div style='float:left;margin-top:5px;' id='placement-area'>";
+		echo "Placement:";
 		//Placement radiobutton. Grab default from DB if present
 		$placement = (get_post_meta($post->ID, 'silp_placement', true)) ? get_post_meta($post->ID, 'silp_placement', true) : '';
 
@@ -299,7 +343,15 @@ function silp_content($content = '') {
 //Settings page content
 add_action("admin_menu","silp_admin_menu");
 function silp_admin_menu(){
-	add_menu_page(/*page title*/'Dashboard', /*Menu Title*/'Shootitlive',/*access*/'administrator', 'shootitlive', 'silp_settings_page',plugins_url('sil.ico', __FILE__));
+	//"add_options_page" = sub_page under Settings, "add_page" = page straight ,
+	add_options_page(
+		/*page title*/'Dashboard',
+		/*Menu Title*/'Shootitlive',
+		/*access*/'administrator',
+		'shootitlive',
+		'silp_settings_page',
+		plugins_url('sil.ico', __FILE__)
+	);
 }
 
 function silp_settings_page() { /*handler for above menu item*/
@@ -326,6 +378,20 @@ function silp_settings_page() { /*handler for above menu item*/
 						<input type="text" size="57" name="silp_options[token]" value="<?php echo $options['token']; ?>" />
 					</td>
 				</tr>
+				<tr>
+					<th scope="row">Options:</th>
+					<td>
+						<?
+							$silp_option_params = explode(',', silp_option_params);
+							foreach ($silp_option_params as $key) {
+								$checked = ($options[$key] == "on") ? "checked" : "";
+								echo "<input type='checkbox' name='silp_options[".$key."]' ".$checked."> ".ucfirst($key);
+								echo "\n</br>\n";
+							}
+						?>
+					</td>
+				</tr>
+
 			</table>
 			<p class="submit">
 			<input type="submit" class="button-primary" value="<?php _e('Save Changes') ?>" />
@@ -340,6 +406,10 @@ function silp_validate_options($input) {
 	 // strip html from textboxes
 	$input['client'] = wp_filter_nohtml_kses($input['client']); // Sanitize textarea input (strip html tags, and escape characters)
 	$input['token'] = wp_filter_nohtml_kses($input['token']); // Sanitize textbox input (strip html tags, and escape characters)
+	$silp_option_params = explode(',', silp_option_params);
+	foreach ($silp_option_params as $key) {
+		$input[$key] = wp_filter_nohtml_kses($input[$key]); // Sanitize textbox input (strip html tags, and escape characters)
+	}
 	return $input;
 }
 

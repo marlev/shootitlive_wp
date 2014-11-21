@@ -1,8 +1,8 @@
 === Shootitlive ===
 Tags: cms,video,photos,livepublishing
 Requires at least: 3.0
-Tested up to: 4.0
-Stable tag: 1.1
+Tested up to: 4.0.1
+Stable tag: 1.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,9 @@ Test the functionality  without your own API credentials by using **API Organiza
 
 == Changelog ==
 
+= 1.2 =
+* Moved settings page. Settings page now holds options such as displaying share button, ads etc.
+
 = 1.1 =
 * Bumping version number
 
@@ -35,6 +38,9 @@ Test the functionality  without your own API credentials by using **API Organiza
 * First version
 
 == Upgrade Notice ==
+
+= 1.2 =
+* New Settings page with new features.
 
 = 1.1 =
 * Fixed bug in 0.2 release and bumping verison number.
