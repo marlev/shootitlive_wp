@@ -1,5 +1,6 @@
 <?php
 defined('ABSPATH') or die("No script kiddies please!");
+ini_set('default_charset', 'UTF-8');
 /*
 Plugin Name: Shootitlive
 Plugin URI: http://shootitlive.com
@@ -65,7 +66,9 @@ function silp_meta_box_add() {
 //API call & drop down menu
 function silp_meta_box_cb( $post ) {
 	$values = get_post_custom( $post->ID );
-	$selected = isset( $values['silp_project'] ) ? esc_attr( $values['silp_project'][0] ) : '';
+	$selectedProject = isset( $values['silp_project'] ) ? esc_attr( $values['silp_project'][0] ) : '';
+	$selectedVideo = isset( $values['silp_video'] ) ? esc_attr( $values['silp_video'][0] ) : '';
+	$silp_type = isset( $values['silp_type'] ) ? $values['silp_type'][0] : '';
 	$silp_params = isset( $values['silp_params'] ) ? $values['silp_params'][0] : '';
 	$options = get_option('silp_options');
     $silp_client = $options['client'];
@@ -95,7 +98,8 @@ function silp_meta_box_cb( $post ) {
 	}
 
 	else {
-		$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true";
+		if( ($silp_type == "project") || (!$silp_type) ) $silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true";
+		if($silp_type == "video") $silp_call = apiBaseUrl."/v1/media/?client=".$silp_client."&token=".$silp_token."&embed=true&embed=true";
 		if($silp_params) $silp_call .= $silp_params; //add the stored DB silp_params to api call
 		$json_data2 = @file_get_contents($silp_call);
 	}
@@ -108,22 +112,51 @@ function silp_meta_box_cb( $post ) {
 		$obj2=json_decode($json_data2, true);
 		wp_nonce_field( 'silp_meta_box_nonce', 'meta_box_nonce' );
 
-		echo "<div style='float:left;'>Project:</div>";
+		echo "<div id='silp_type_area'>";
+		echo "<div style='float:left;'>Type:</div>";
 
 		echo "<div style='margin-left:60px;'>";
-		echo "<select name='silp_project' id='silp_project' onchange='goEmbed();'>\n\n";
-		echo "\n\n<option value='0'>Select a project:</option>\n\n";
+		echo "<input type='radio' name='silp_type' value='project' onchange='goEmbed();'";
+		if( ($silp_type == 'project') || ($silp_type == '') ) echo "checked";
+		echo ">Galleries";
+		// echo "</div>";
 
-		foreach($obj2[$silp_client] as $p) {
-			echo "<option value='".$p["project"]."'".selected( $selected, $p["project"]).">";
-			//limit project description to 23chars, so it fits in dropdown
-			$description = (strlen($p["description"]) > 23) ? substr($p["description"],0,19).'...' : $p["description"];
-			echo $description;
-			echo "</option>\n";
-			if($selected == $p["project"]) $embedcode = $p["embed"];
+		// echo "<div style='margin-left:30px;'>";
+		echo "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+		echo "<input type='radio' name='silp_type' id='silp_type_video' value='video' onchange='goEmbed();'";
+		if($silp_type == 'video') echo "checked";
+		echo ">Videos";
+		echo "</div>";
+
+		echo "</div>";
+
+
+		function createDropdown($obj2,$silp_client,$silp_type) {
+				$dropdown = "\n\n<option value='0'>Select a project:</option>\n\n";
+				foreach($obj2[$silp_client] as $p) {
+					$dropdown .= "<option value='".$p["project"]."'".selected( $selectedProject, $p["project"]).">";
+					//limit project description to 23chars, so it fits in dropdown
+					$description = (strlen($p["description"]) > 23) ? substr($p["description"],0,19).'...' : $p["description"];
+					$dropdown .= $description;
+					$dropdown .= "</option>\n";
+					if($selectedProject == $p["project"]) $embedcode = $p["embed"];
+				}
+				return $dropdown;
 		}
 
+
+
+		echo "<div style='float:left;' id='silp_type_text'>Project:</div>";
+		echo "<div style='margin-left:60px;'>";
+
+		echo "<select id='silp_video' name='silp_video' onchange='goEmbed();' style='display:none;'>";
+		if($silp_type == 'video') echo createDropdown($obj2,$silp_client,$silp_type);
 		echo "</select>";
+
+		echo "<select name='silp_project' id='silp_project' onchange='goEmbed();'>\n\n";
+		if( ($silp_type == 'project') ||  (!$silp_type) ) echo createDropdown($obj2,$silp_client,$silp_type);
+		echo "</select>";
+
 		echo "</div>\n\n";
 		$checkboxHtml ='';
 		$ratioHtml ='';
@@ -137,6 +170,7 @@ function silp_meta_box_cb( $post ) {
 		}
 
 		function createRatio($name, $value) {
+			$value = 1.7777777778;
 			if($value == 1.5) $valueDescription = "Standard";
 			if($value == 1.7777777778) $valueDescription = "Wide";
 			if($value == 1) $valueDescription = "Square";
@@ -269,7 +303,12 @@ function silp_meta_box_save( $post_id )
 	if( isset( $_POST['silp_meta_box_text'] ) )
 		update_post_meta( $post_id, 'silp_meta_box_text', wp_kses( $_POST['silp_meta_box_text'], $allowed ) );
 
-	if( isset( $_POST['silp_project'] ) )
+	if( isset( $_POST['silp_video'] ) ) {
+		update_post_meta( $post_id, 'silp_video', esc_attr( $_POST['silp_video'] ) );
+		$silp_video = $_POST['silp_video'];
+	}
+
+	if( (isset( $_POST['silp_project'])) && (!$silp_video)  )
 		update_post_meta( $post_id, 'silp_project', esc_attr( $_POST['silp_project'] ) );
 
 	// Saving the current silp_params to db. So we can get them later ad display the admin silp accordingly
@@ -281,26 +320,43 @@ function silp_meta_box_save( $post_id )
 	update_post_meta( $post_id, 'silp_placement', $_POST['silp_placement'] );
 
 	//Saving the embed code
-	if( isset( $_POST['silp_project'] ) ) {
+	if( (isset( $_POST['silp_project'])) || (isset($_POST['silp_video'])) ) {
 		global $post;
-		$project = get_post_meta($post->ID, 'silp_project', true);
 
-		if($project != "0") {
+		//$silp_video = ((isset($_POST['silp_video']))) ? (isset($_POST['silp_video'])) : '';
+		$project = get_post_meta($post->ID, 'silp_project', true);
+		$video = get_post_meta($post->ID, 'silp_video', true);
+
+		if( ($project != "0") && ($video != "0") ) {
 			$options = get_option('silp_options');
 			$silp_client = $options['client'];
 			$silp_token = $options['token'];
-			$silp_call = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true&project=".$project;
+			$silp_call_project = apiBaseUrl."/v1/projects/?client=".$silp_client."&token=".$silp_token."&embed=true&project=".$project;
+			$silp_call_video = apiBaseUrl."/v2/embeds/media-".$video;
+
+			$silp_call = ($video != "0") ? $silp_call_video : $silp_call_project;
+
 			//if user have changes silp settings, we're passing them to the api-call when reuqesting embed code and store in db
-			if( isset( $_POST['silp_params'] ) ) $silp_call .= $_POST['silp_params'];
+			if( isset( $_POST['silp_params'] ) ) {
+				//if video we neew to replace first "&" with "?" in silp_params
+				$silp_params = ($video != "0") ? "?".substr($_POST['silp_params'], 1) : $_POST['silp_params'];
+				$silp_call .= $silp_params;
+			}
 			$json_data2 = file_get_contents($silp_call);
 			$obj3=json_decode($json_data2, true);
 
-			update_post_meta( $post_id, 'silp_embed', $obj3[$silp_client][0][embed] );
+			if($video != "0") update_post_meta( $post_id, 'silp_embed', $obj3[embed_code] );
+			if($video != "0") update_post_meta( $post_id, 'silp_type', 'video' );
+			if($video == "0") update_post_meta( $post_id, 'silp_embed', $obj3[$silp_client][0][embed] );
+			if($video == "0") update_post_meta( $post_id, 'silp_type', 'project' );
+
 		}
 
-		if($project == "0") {
+		if( ($project == "0") && ($video == "0") ) {
 			//if we've unset the silp, lets remove all db entrys
 			if(get_post_meta($post->ID, 'silp_project', true)) update_post_meta( $post_id, 'silp_project', '' );
+			if(get_post_meta($post->ID, 'silp_video', true)) update_post_meta( $post_id, 'silp_video', '' );
+			if(get_post_meta($post->ID, 'silp_type', true)) update_post_meta( $post_id, 'silp_type', '' );
 			if(get_post_meta($post->ID, 'silp_embed', true)) update_post_meta( $post_id, 'silp_embed', '' );
 			if(get_post_meta($post->ID, 'silp_params', true)) update_post_meta( $post_id, 'silp_params', '' );
 			if(get_post_meta($post->ID, 'silp_placement', true)) update_post_meta( $post_id, 'silp_placement', '' );
@@ -416,7 +472,7 @@ function silp_validate_options($input) {
 
 //only load script if we're on post page
 global $pagenow;
-if (! empty($pagenow) && ('post-new.php' === $pagenow || 'post.php' === $pagenow )) {
+if (! empty($pagenow) && ('post-new.php' === $pagenow)) {
 ?>
 
 <script>
@@ -424,11 +480,28 @@ if (! empty($pagenow) && ('post-new.php' === $pagenow || 'post.php' === $pagenow
 		goEmbed(); //This is mainly do remove the option-div when there's no project set in dropdown
 	}
 
-	function updatePlayer(project,silp_settings) {
+	function fetchJSONFile(path, callback) {
+	    var httpRequest = new XMLHttpRequest();
+	    httpRequest.onreadystatechange = function() {
+	        if (httpRequest.readyState === 4) {
+	            if (httpRequest.status === 200) {
+	                var data = JSON.parse(httpRequest.responseText);
+	                if (callback) callback(data);
+	            }
+	        }
+	    };
+	    httpRequest.open('GET', path);
+	    httpRequest.send();
+	}
+
+	function updatePlayer(project,silp_settings,silp_video_id) {
+
 		var player = document.getElementById('player-area');
 		var option_area = document.getElementById('options-area')
 		var placement_area = document.getElementById('placement-area')
 		var project_area = document.getElementById('silp_project');
+		var silp_type = document.getElementById("silp_type_video").checked ? 'video' : 'gallery';
+		var silp_type_area = document.getElementById('silp_type_area');
 		while (player.firstChild) {
 		    player.removeChild(player.firstChild);
 		}
@@ -436,21 +509,45 @@ if (! empty($pagenow) && ('post-new.php' === $pagenow || 'post.php' === $pagenow
 		// Make sure to reload Silp entirely
 	    if(window.Silp) window.Silp = {};
 
-	    if(project != 0) {
-	    	//Lets display our option & placement div's
-	    	if(option_area) option_area.style.display = 'block';
-	    	if(placement_area) placement_area.style.display = 'block';
+	    if( (project != 0) || ( (silp_type == 'video') && (silp_video_id != 0) && (silp_video_id != 'doApi') ) ) {
 
-	    	project_area.options[0].text = "Remove player from post";
-
-		    player.style.display = 'block';
+	    	player.style.display = 'block';
 		    var script = document.createElement('script');
 		    script.type = 'text/javascript';
-		    <?
-		    $options = get_option('silp_options');
-		    $client = $options['client'];
-		    ?>
-		    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.<?echo $client;?>.js?project='+project+silp_settings;
+
+
+	    	if(silp_type == 'gallery') {
+		    	//Lets display our option & placement div's
+		    	if(option_area) option_area.style.display = 'block';
+		    	if(placement_area) placement_area.style.display = 'block';
+		    	silp_type_area.style.display = 'none'; //when a gallery project is selected, we're removing the radio btn
+		    	project_area.options[0].text = "Remove player from post";
+		    	<?
+			    $options = get_option('silp_options');
+			    $client = $options['client'];
+			    $token = $options['token'];
+			    ?>
+			    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.<?echo $client;?>.js?project='+project+silp_settings;
+			}
+
+	    	if(silp_type == 'video') {
+		    	//Lets display our option & placement div's
+		    	if(option_area) option_area.style.display = 'block';
+		    	if(placement_area) placement_area.style.display = 'block';
+		    	//silp_type_area.style.display = 'none'; //when a gallery project is selected, we're removing the radio btn
+		    	//project_area.options[0].text = "Remove player from post";
+		    	//silp_settings = '&ratio=1.7777777778';
+		    	<?
+			    $options = get_option('silp_options');
+			    $client = $options['client'];
+			    $token = $options['token'];
+			    ?>
+			    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.<?echo $client;?>.js?single='+silp_video_id+silp_settings;
+			}
+
+
+
+
 		    player.appendChild(script);
 
 		    //creating a hidden input that will hold our silp_params
@@ -465,12 +562,96 @@ if (! empty($pagenow) && ('post-new.php' === $pagenow || 'post.php' === $pagenow
 			//if project = 0, we're hiding the options area & placement area and remove the silp
 			if(option_area) option_area.style.display = 'none';
 			if(placement_area) placement_area.style.display = 'none';
+			if( (silp_type_area) && (silp_type != 'video') ) silp_type_area.style.display = 'block'; //when no project is selected, were displaying type btn
 			project_area.options[0].text = "Select a project:";
 			player.style.display = 'none';
 		}
 	}
 
 	function goEmbed() {
+		var project_area = document.getElementById('silp_project');
+		var silp_type = document.getElementById("silp_type_video").checked ? 'video' : 'gallery';
+		var silp_type_area = document.getElementById('silp_type_area');
+		var silp_video = document.getElementById('silp_video');
+		if(silp_type == 'gallery') {
+			document.getElementById("silp_type_text").innerHTML = 'Project:';
+			if(project_area) project_area.style.display = 'block'; //Display project dropdown
+			if(silp_video) silp_video.style.display = 'none'; //Hide video dropdown
+		}
+
+		if(silp_type == 'video') {
+			if(project_area) project_area.style.display = 'none'; //Hide project dropdown
+			if(silp_video) silp_video.style.display = 'block'; //display video dropdown
+
+
+			if(typeof silp_video.options[silp_video.selectedIndex] !== "undefined") {
+				var silp_video_id = (silp_video.options[silp_video.selectedIndex].value) ? silp_video.options[silp_video.selectedIndex].value : 0;
+			}
+			else {
+				var silp_video_id = 'doApi';
+			}
+
+
+			document.getElementById("silp_type_text").innerHTML = 'Video:';
+			//Fetch videos from API
+			var url = "<?echo apiBaseUrl;?>/v1/media/?"
+			var params = "client=<?echo $client;?>&token=<?echo $token;?>&type=video&embed=true";
+			var silp_call = url+params;
+
+			function format_two_digits(n) {
+			    return n < 10 ? '0' + n : n;
+			}
+
+			function DateTime(captured) {
+				d = new Date(captured * 1000);
+				year = d.getFullYear().toString().substr(2,2);;
+				month = format_two_digits(d.getMonth() + 1);
+				day = format_two_digits(d.getDate());
+				hours = format_two_digits(d.getHours());
+    			minutes = format_two_digits(d.getMinutes());
+				var DateTimeString = year+''+month+''+day+' '+hours+':'+minutes;
+				return DateTimeString;
+			}
+
+
+			if(silp_video_id == 'doApi') {
+				var opt = document.createElement('option');
+				opt.value = '0';
+				opt.innerHTML = 'Select a video';
+				silp_video.appendChild(opt);
+
+				fetchJSONFile(silp_call, function(data){
+				    if(data) {
+				    	for (var key in data) {
+				    		var captured = DateTime(data[key].captured);
+				    		var caption = (data[key].caption) ? data[key].caption : '';
+				    		var filename = (data[key].original_filename) ? data[key].original_filename.substr(0,15) : 'no name';
+				    		var n = data[key].embed.search('single=');
+				    		var single_embed = data[key].embed.substr(n+7, 8)
+
+
+				    		var opt = document.createElement('option');
+						    opt.value = single_embed;
+						    //opt.onchange = goEmbed();
+						    opt.innerHTML = captured+' ('+filename+')';
+						    silp_video.appendChild(opt);
+				    	}
+
+				    }
+
+				});
+			} //if video_id not doApi
+
+			if( (silp_video_id != 0) && (silp_video_id != 'doApi') ) {
+				silp_video.options[0].text = "Remove video from post";
+				silp_type_area.style.display = 'none';
+			}
+			else {
+				silp_video.options[0].text = "Select a video";
+				silp_type_area.style.display = 'block';
+			}
+
+		} //if video
 
 		//Get project number
 	    var projectID = document.getElementById('silp_project');
@@ -497,8 +678,9 @@ if (! empty($pagenow) && ('post-new.php' === $pagenow || 'post.php' === $pagenow
 			silp_settings_string += "&ratio="+ratio;
 		}
 
+		if(!silp_video_id) silp_video_id = 0;
 
-		updatePlayer(project,silp_settings_string);
+		updatePlayer(project,silp_settings_string,silp_video_id);
 
 	}
 
