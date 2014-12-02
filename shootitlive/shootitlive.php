@@ -6,7 +6,7 @@ Plugin Name: Shootitlive
 Plugin URI: http://shootitlive.com
 Description: Plugin for embedding live feeds from Shootitlive.com
 Author: Martin Levy
-Version: 1.2
+Version: 1.3
 Author URI: http://shootitlive.com
 License: GPL2
 */

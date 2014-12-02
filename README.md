@@ -1,7 +1,7 @@
 Shootitlive WordPress plugin
 ==============
 
-This is a plugin to simplify embedding Shootitlive projects in WordPress. When writing a new post in WordPress you will have access to a dropdown list with your Shootitlive project to quickly embed. More info at https://wordpress.org/plugins/shootitlive/
+This is a plugin to simplify embedding Shootitlive projects or videos in WordPress. When writing a new post in WordPress you will have access to a dropdown list with your Shootitlive project and videos to quickly embed. More info at https://wordpress.org/plugins/shootitlive/
 
 Shootitlive WordPress plugin is based on the step-by-step guide at http://shared.shootitlive.com/escenic/index.html
 
