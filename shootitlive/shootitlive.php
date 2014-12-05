@@ -1,6 +1,7 @@
 <?php
 defined('ABSPATH') or die("No script kiddies please!");
 ini_set('default_charset', 'UTF-8');
+date_default_timezone_set('Europe/Stockholm');
 /*
 Plugin Name: Shootitlive
 Plugin URI: http://shootitlive.com
@@ -143,7 +144,7 @@ function silp_meta_box_cb( $post ) {
 		if($silp_type == 'video') {
 			echo "\n\n<option value='0'>Select a video:</option>\n\n";
 			foreach($objVideo as $p) {
-				$captured = date("ymd H:m",$p[captured]);
+				$captured = date("ymd H:i",$p[captured]);
 				$caption = ($p[caption]) ? $p[caption] : '';
 				$filename = ($p[original_filename]) ? '('.substr($p[original_filename],0,15).')' : '(no name)';
 				$id = substr($p[embed], strpos($p[embed],'single=')+7, 8);
