@@ -290,6 +290,7 @@ function silp_meta_box_cb( $post ) {
 		$embedcode = ($silp_type == 'video') ? $embedcode_video : $embedcode;
 		echo $embedcode;
 		echo "</div>\n\n";
+		echo "<div align='right' id='editMedia'></div>";
 
 	}//end if we have a correct api client/token
 }//end function
@@ -442,7 +443,7 @@ function silp_settings_page() { /*handler for above menu item*/
 			<?php $options = get_option('silp_options'); ?>
 
 			<table class="form-table">
-				<tr height='10px;'>
+				<tr>
 					<th scope="row">Enter Organisation Name:</th>
 					<td>
 						<input type="text" size="57" name="silp_options[client]" value="<?php echo $options['client']; ?>" />
@@ -544,6 +545,7 @@ if (! empty($pagenow) && ('post-new.php' === $pagenow || $_GET['action'] == 'edi
 	function updatePlayer(project,silp_settings,silp_video_id) {
 
 		var player = document.getElementById('player-area');
+		var editMedia = document.getElementById('editMedia');
 		var option_area = document.getElementById('options-area')
 		var placement_area = document.getElementById('placement-area')
 		var project_area = document.getElementById('silp_project');
@@ -562,6 +564,12 @@ if (! empty($pagenow) && ('post-new.php' === $pagenow || $_GET['action'] == 'edi
 		    var script = document.createElement('script');
 		    script.type = 'text/javascript';
 
+		    <?
+		    $options = get_option('silp_options');
+		    $client = $options['client'];
+		    $token = $options['token'];
+			?>
+			baseLoad = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.<?echo $client;?>.js';
 
 	    	if(silp_type == 'project') {
 		    	//Lets display our option & placement div's
@@ -569,28 +577,20 @@ if (! empty($pagenow) && ('post-new.php' === $pagenow || $_GET['action'] == 'edi
 		    	if(placement_area) placement_area.style.display = 'block';
 		    	silp_type_area.style.display = 'none'; //when a project project is selected, we're removing the radio btn
 		    	project_area.options[0].text = "Remove player from post";
-		    	<?
-			    $options = get_option('silp_options');
-			    $client = $options['client'];
-			    $token = $options['token'];
-			    ?>
-			    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.<?echo $client;?>.js?project='+project+silp_settings;
+			    script.src = baseLoad+'?project='+project+silp_settings;
+			    var editHtml = '<a href="https://admin.shootitlive.com/projects/edit/<?echo $client;?>/'+project+'" target="_blank">Edit in Shootitlive admin</a>';
+				editMedia.innerHTML = editHtml;
+			    editMedia.style.display = 'block';
 			}
 
 	    	if(silp_type == 'video') {
 		    	//Lets display our option & placement div's
 		    	if(option_area) option_area.style.display = 'block';
 		    	if(placement_area) placement_area.style.display = 'block';
-		    	//silp_type_area.style.display = 'none'; //when a project project is selected, we're removing the radio btn
-		    	//project_area.options[0].text = "Remove player from post";
-		    	//silp_settings = '&ratio=1.7777777778';
-		    	<?
-			    $options = get_option('silp_options');
-			    $client = $options['client'];
-			    $token = $options['token'];
-			    ?>
-			    script.src = '//s3-eu-west-1.amazonaws.com/shootitlive/shootitlive.load.v1.1.<?echo $client;?>.js?single='+silp_video_id+silp_settings;
+			    script.src = baseLoad+'?single='+silp_video_id+silp_settings;
+			    //var editHtml = 'Edit project in Shootitlive admin';
 			}
+
 
 
 
@@ -612,6 +612,7 @@ if (! empty($pagenow) && ('post-new.php' === $pagenow || $_GET['action'] == 'edi
 			if( (silp_type_area) && (silp_type != 'video') ) silp_type_area.style.display = 'block'; //when no project is selected, were displaying type btn
 			project_area.options[0].text = "Select a project:";
 			player.style.display = 'none';
+			editMedia.style.display = 'none';
 		}
 	}
 
