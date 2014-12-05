@@ -58,8 +58,9 @@ function silp_init(){
 
 // Add meta_box
 add_action( 'add_meta_boxes', 'silp_meta_box_add' );
+$typePost = array('post','page');
 function silp_meta_box_add() {
-	add_meta_box( 'silp-meta-box-id', 'Shootitlive', 'silp_meta_box_cb', 'post', 'side', 'high' );
+	add_meta_box( 'silp-meta-box-id', 'Shootitlive', 'silp_meta_box_cb', $typePost, 'side', 'high' );
 }
 
 
@@ -441,7 +442,7 @@ function silp_settings_page() { /*handler for above menu item*/
 			<?php $options = get_option('silp_options'); ?>
 
 			<table class="form-table">
-				<tr>
+				<tr height='10px;'>
 					<th scope="row">Enter Organisation Name:</th>
 					<td>
 						<input type="text" size="57" name="silp_options[client]" value="<?php echo $options['client']; ?>" />
@@ -454,7 +455,13 @@ function silp_settings_page() { /*handler for above menu item*/
 					</td>
 				</tr>
 				<tr>
-					<th scope="row">Options:</th>
+					<th scope="row">
+						Options:
+						<div style='color:grey;font-weight:lighter;font-size:small'>
+							Enable options to appear when embedding
+							Shootitlive in a post or page.
+						</div>
+					</th>
 					<td>
 						<?
 							$silp_option_params = explode(',', silp_option_params);
@@ -472,6 +479,27 @@ function silp_settings_page() { /*handler for above menu item*/
 			<input type="submit" class="button-primary" value="<?php _e('Save Changes') ?>" />
 			</p>
 		</form>
+
+		<div style='color:grey;font-weight:bold;font-size:large'>
+			<b>F.A.Q</b>
+		</div>
+		<div style='color:grey;font-weight:lighter;font-size:small'>
+			</br>
+			<b>Where can I find my API information</b>
+			</br>Find the <i>Organisation name</i> and <i>API key</i> on your <a href='https://admin.shootitlive.com/' target='_blank'>profile page</a>
+			</br>Make sure you are entitled to use the API according to your <a href='http://shootitlive.com/signup/' target='_blank'>plan</a>
+			</br>
+			</br>
+			<b>How do I switch between galleries and videos</b>
+			</br>When creating a new post or page, you choose to list your galleries or videos and then select from the dropdown
+			</br>If a video is selected, you must first unselect it to be able to list your galleries.
+			</br>
+			</br>
+			<b>I need support</b>
+			</br><a href="mailto:support@shootitlive.com?Subject=API Support" target="_top">support@shootitlive.com</a>
+		</div>
+
+
 	</div>
 	<?
 }
