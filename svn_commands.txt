@@ -1,0 +1,11 @@
+When pushing new update:
+1. Update "Version:" in plugin php file
+2. In readme.txt update "Stable tag"
+3. In readme.txt update "Changelog"
+4. In readme.txt update "Upgrade Notice"
+5. Create a new shootitlive.zip file
+6. Commit and sync to github
+7. Copy the updated files (usually reamy.txt and shootitlive.php) to /svn/ directory
+8. $svn ci -m "Commit message"
+9. $svn cp trunk tags/1.4 (create new version)
+10. $svn ci -m "Tagging release 1.4"
